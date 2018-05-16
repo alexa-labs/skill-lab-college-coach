@@ -97,9 +97,39 @@ const IntentReflectorHandler = {
   }
 };
 
+const HasAssignmentLaunchRequestHandler = {
+  canHandle(handlerInput){
+    const attributesManager = handlerInput.attributesManager;
+    console.log(" Can Handle attributes Manager ");
+    const sessionAttributes = attributesManager.getSessionAttributes();
+    console.log("sessionAttributes from HasAssignment: " + JSON.stringify(sessionAttributes));
+
+    return handlerInput.requestEnvelope.request.type === 'LaunchRequest' &&
+            sessionAttributes &&
+            sessionAttributes.currentAssignment &&
+            sessionAttributes.currentAssignment.name != 'null';
+  },
+  handle(handlerInput){
+    console.log("Yes this works!");
+    const attributesManager = handlerInput.attributesManager;
+    const sessionAttributes = attributesManager.getSessionAttributes();
+
+    let currentAssignment = sessionAttributes.currentAssignment;
+
+    const speechOutput = getGreeting() + getStreak() + 'Your assignment from last time was ' 
+                        + currentAssignment.name + currentAssignment.prompt;
+    const reprompt = currentAssignment.prompt;
+
+    return handlerInput.responseBuilder
+      .speak(speechOutput)
+      .reprompt(reprompt)
+      .getResponse();
+  }
+};
+
 const LaunchRequestHandler = {
   canHandle(handlerInput){
-    return handlerInput.requestEnvelope.request.type === 'LaunchRequest';
+    return handlerInput.requestEnvelope.request.type === 'LaunchRequest' ;
   },
   handle(handlerInput){
     const requestType = handlerInput.requestEnvelope.request.type;
@@ -153,6 +183,38 @@ const ErrorHandler = {
   },
 };
 
+//** Helper Functions */
+
+function getGreeting() {
+  return "Welcome back! ";
+};
+
+function getStreak(){
+  return "Love the dedication! ";
+};
+
+
+//** Interceptors */
+
+const InitializeSession = {
+  process (handlerInput) {
+    const attributesManager = handlerInput.attributesManager;
+    const sessionAttributes = attributesManager.getSessionAttributes();
+
+    console.log(sessionAttributes);
+
+      if (Object.keys(sessionAttributes).length === 0) {
+          sessionAttributes.currentAssignment = {};
+          sessionAttributes.currentAssignment.name = "look at Colorado School of Mines.";
+          sessionAttributes.currentAssignment.prompt = "On a Scale of one through five, how would you rate this?";
+        }
+        
+        console.log(sessionAttributes);
+        attributesManager.setSessionAttributes(sessionAttributes);
+      } 
+  }
+
+
 const skillBuilder = Alexa.SkillBuilders.standard();
 
 //TODO: streak system
@@ -167,10 +229,14 @@ exports.handler = skillBuilder
     CompleteProfileIntentHandler,
     DenyProfileIntentHandler,
     IntentReflectorHandler,
+    HasAssignmentLaunchRequestHandler,
     LaunchRequestHandler
   )
   .addErrorHandlers(
     RequestHandlerChainErrorHandler,
     ErrorHandler
+  )
+  .addRequestInterceptors(
+    InitializeSession
   )
   .lambda();
