@@ -3,33 +3,20 @@
 
 const Alexa = require('ask-sdk');
 
-const InProgressRatingIntentHandler = {
+const RatingIntentHandler = {
   canHandle(handlerInput){
     return handlerInput.requestEnvelope.request.type === 'IntentRequest' &&
-            handlerInput.requestEnvelope.request.intent.name === 'RatingIntent' &&
-            handlerInput.requestEnvelope.request.dialogState !== 'COMPLETED';
+            handlerInput.requestEnvelope.request.intent.name === 'RatingIntent';
   },
   handle(handlerInput){
     const intentName = handlerInput.requestEnvelope.request.intent.name;
-    //TODO: Echo the Slots
-    return handlerInput.responseBuilder
-      .speak('In Progress: ' + intentName)
-      .reprompt('Reprompt Text')
-      .getResponse();
-  }
-};
 
-const CompleteRatingIntentHandler = {
-  canHandle(handlerInput){
-    return handlerInput.requestEnvelope.request.type === 'IntentRequest' &&
-            handlerInput.requestEnvelope.request.intent.name === 'RatingIntent' &&
-            handlerInput.requestEnvelope.request.dialogState !== 'COMPLETED';
-  },
-  handle(handlerInput){
-    const intentName = handlerInput.requestEnvelope.request.intent.name;
-    //TODO: Echo the Slots
+    const filledSlots = handlerInput.requestEnvelope.request.intent.slots;
+    const slotValues = getSlotValues(filledSlots);
+    console.log(JSON.stringify(slotValues));
+
     return handlerInput.responseBuilder
-      .speak('In Progress: ' + intentName)
+      .speak('So you thought it was ' + slotValues.rating_sentiment.id)
       .reprompt('Reprompt Text')
       .getResponse();
   }
@@ -107,7 +94,7 @@ const HasAssignmentLaunchRequestHandler = {
     return handlerInput.requestEnvelope.request.type === 'LaunchRequest' &&
             sessionAttributes &&
             sessionAttributes.currentAssignment &&
-            sessionAttributes.currentAssignment.name != 'null';
+            sessionAttributes.currentAssignment.name;
   },
   handle(handlerInput){
     console.log("Yes this works!");
@@ -116,8 +103,8 @@ const HasAssignmentLaunchRequestHandler = {
 
     let currentAssignment = sessionAttributes.currentAssignment;
 
-    const speechOutput = getGreeting() + getStreak() + 'Your assignment from last time was ' 
-                        + currentAssignment.name + currentAssignment.prompt;
+    const speechOutput = getGreeting() + getStreak() + 'Your assignment from last time was' + ' ' 
+                        + currentAssignment.name +  ' ' + currentAssignment.prompt;
     const reprompt = currentAssignment.prompt;
 
     return handlerInput.responseBuilder
@@ -193,6 +180,52 @@ function getStreak(){
   return "Love the dedication! ";
 };
 
+//** Cookbook */
+
+function getSlotValues(filledSlots) {
+  const slotValues = {};
+
+  console.log(`The filled slots: ${JSON.stringify(filledSlots)}`);
+  Object.keys(filledSlots).forEach((item) => {
+    const name = filledSlots[item].name;
+
+    if (filledSlots[item] &&
+      filledSlots[item].resolutions &&
+      filledSlots[item].resolutions.resolutionsPerAuthority[0] &&
+      filledSlots[item].resolutions.resolutionsPerAuthority[0].status &&
+      filledSlots[item].resolutions.resolutionsPerAuthority[0].status.code) {
+      switch (filledSlots[item].resolutions.resolutionsPerAuthority[0].status.code) {
+        case 'ER_SUCCESS_MATCH':
+          slotValues[name] = {
+            synonym: filledSlots[item].value,
+            resolved: filledSlots[item].resolutions.resolutionsPerAuthority[0].values[0].value.name,
+            id: filledSlots[item].resolutions.resolutionsPerAuthority[0].values[0].value.id,
+            isValidated: true
+          };
+          break;
+        case 'ER_SUCCESS_NO_MATCH':
+          slotValues[name] = {
+            synonym: filledSlots[item].value,
+            resolved: filledSlots[item].value,
+            id: null,
+            isValidated: false,
+          };
+          break;
+        default:
+          break;
+      }
+    } else {
+      slotValues[name] = {
+        synonym: filledSlots[item].value,
+        resolved: filledSlots[item].value,
+        id: filledSlots[item].id,
+        isValidated: false
+      };
+    }
+  }, this);
+
+  return slotValues;
+}
 
 //** Interceptors */
 
@@ -201,6 +234,7 @@ const InitializeSession = {
     const attributesManager = handlerInput.attributesManager;
     const sessionAttributes = attributesManager.getSessionAttributes();
 
+    console.log("Interceptor says hello");
     console.log(sessionAttributes);
 
       if (Object.keys(sessionAttributes).length === 0) {
@@ -223,8 +257,7 @@ const skillBuilder = Alexa.SkillBuilders.standard();
 
 exports.handler = skillBuilder
   .addRequestHandlers(
-    InProgressRatingIntentHandler,
-    CompleteRatingIntentHandler,
+    RatingIntentHandler,
     InProgressProfileIntentHandler,
     CompleteProfileIntentHandler,
     DenyProfileIntentHandler,
