@@ -13,11 +13,25 @@ const RatingIntentHandler = {
 
     const filledSlots = handlerInput.requestEnvelope.request.intent.slots;
     const slotValues = getSlotValues(filledSlots);
-    console.log(JSON.stringify(slotValues));
+    const reprompt = 'From one through five, how would you rate the Colorado School of Mines? ';
+
+    let ratingResponse;
+
+    if (slotValues.rating_number.value > 3 || slotValues.rating_sentiment.id > 3) {
+        ratingResponse = 'Great! Sounds like you liked the Colorado School of Mines. ';
+    } else if (slotValues.rating_number.value <= 3 || slotValues.rating_sentiment.id <= 3) {
+        ratingResponse = 'Ok. We\'ll find better matches for you next time. ';
+    } else {
+        ratingResponse = 'Sorry, I\'m not sure what ' + slotValues.rating_sentiment.id
+        + ' means. ' + reprompt;
+    }
+
+    // TODO: Apped next refine search information
+    ratingResponse += 'Do you think you would prefer a small, medium, or large school? ';
 
     return handlerInput.responseBuilder
-      .speak('So you thought it was ' + slotValues.rating_sentiment.id)
-      .reprompt('Reprompt Text')
+      .speak(ratingResponse)
+      .reprompt(reprompt)
       .getResponse();
   }
 };
@@ -198,7 +212,7 @@ function getSlotValues(filledSlots) {
         case 'ER_SUCCESS_MATCH':
           slotValues[name] = {
             synonym: filledSlots[item].value,
-            resolved: filledSlots[item].resolutions.resolutionsPerAuthority[0].values[0].value.name,
+            value: filledSlots[item].resolutions.resolutionsPerAuthority[0].values[0].value.name,
             id: filledSlots[item].resolutions.resolutionsPerAuthority[0].values[0].value.id,
             isValidated: true
           };
@@ -206,7 +220,7 @@ function getSlotValues(filledSlots) {
         case 'ER_SUCCESS_NO_MATCH':
           slotValues[name] = {
             synonym: filledSlots[item].value,
-            resolved: filledSlots[item].value,
+            value: filledSlots[item].value,
             id: null,
             isValidated: false,
           };
@@ -217,7 +231,7 @@ function getSlotValues(filledSlots) {
     } else {
       slotValues[name] = {
         synonym: filledSlots[item].value,
-        resolved: filledSlots[item].value,
+        value: filledSlots[item].value,
         id: filledSlots[item].id,
         isValidated: false
       };
