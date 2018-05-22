@@ -13,12 +13,19 @@ const RatingIntentHandler = {
 
     const filledSlots = handlerInput.requestEnvelope.request.intent.slots;
     const slotValues = getSlotValues(filledSlots);
-    const reprompt = 'From one through five, how would you rate the Colorado School of Mines? ';
 
+    const attributesManager = handlerInput.attributesManager;
+    const sessionAttributes = attributesManager.getSessionAttributes();
+    
+    console.log("Rating Intent Handler: " + sessionAttributes);
+
+    let currentAssignment = sessionAttributes.currentAssignment;
     let ratingResponse;
 
+    const reprompt = 'From one through five, how would you rate the ' + currentAssignment.school.name;
+
     if (slotValues.rating_number.value > 3 || slotValues.rating_sentiment.id > 3) {
-        ratingResponse = 'Great! Sounds like you liked the Colorado School of Mines. ';
+        ratingResponse = 'Great! Sounds like you liked the ' + currentAssignment.school.name;
     } else if (slotValues.rating_number.value <= 3 || slotValues.rating_sentiment.id <= 3) {
         ratingResponse = 'Ok. We\'ll find better matches for you next time. ';
     } else {
@@ -26,8 +33,7 @@ const RatingIntentHandler = {
         + ' means. ' + reprompt;
     }
 
-    // TODO: Apped next refine search information
-    ratingResponse += 'Do you think you would prefer a small, medium, or large school? ';
+    ratingResponse += getNextSearchRefinement();
 
     return handlerInput.responseBuilder
       .speak(ratingResponse)
@@ -108,7 +114,7 @@ const HasAssignmentLaunchRequestHandler = {
     return handlerInput.requestEnvelope.request.type === 'LaunchRequest' &&
             sessionAttributes &&
             sessionAttributes.currentAssignment &&
-            sessionAttributes.currentAssignment.name;
+            sessionAttributes.currentAssignment.school;
   },
   handle(handlerInput){
     console.log("Yes this works!");
@@ -118,7 +124,7 @@ const HasAssignmentLaunchRequestHandler = {
     let currentAssignment = sessionAttributes.currentAssignment;
 
     const speechOutput = getGreeting() + getStreak() + 'Your assignment from last time was' + ' ' 
-                        + currentAssignment.name +  ' ' + currentAssignment.prompt;
+                        + currentAssignment.task +  ' ' + currentAssignment.school.name;
     const reprompt = currentAssignment.prompt;
 
     return handlerInput.responseBuilder
@@ -161,7 +167,7 @@ const RequestHandlerChainErrorHandler = {
     return error.message === 'RequestHandlerChain not found!';
   },
   handle(handlerInput, error) {
-    console.log('Error handled: ${error.message}');
+    console.log('Error handled: ' + error.message);
 
     return handlerInput.responseBuilder
       .speak('Oops! Looks like you forgot to register a handler again')
@@ -175,7 +181,7 @@ const ErrorHandler = {
     return true;
   },
   handle(handlerInput, error) {
-    console.log('Error handled: ${error.message}');
+    console.log('Error handled: ' + error.message);
 
     return handlerInput.responseBuilder
       .speak('Sorry, an error occurred.')
@@ -192,6 +198,17 @@ function getGreeting() {
 
 function getStreak(){
   return "Love the dedication! ";
+};
+
+function getNextSearchRefinement() {
+  const data = [
+      'Do you think you would prefer a small, medium, or large school? ',
+      'Would you prefer a rural, suburban, or urban campus setting? ',
+      'This is a placeholder for another refinement? ',
+      'This is another placeholder for ANOTHER refinement? '
+    ];
+  
+  return data[0];
 };
 
 //** Cookbook */
@@ -253,8 +270,8 @@ const InitializeSession = {
 
       if (Object.keys(sessionAttributes).length === 0) {
           sessionAttributes.currentAssignment = {};
-          sessionAttributes.currentAssignment.name = "look at Colorado School of Mines.";
-          sessionAttributes.currentAssignment.prompt = "On a Scale of one through five, how would you rate this?";
+          sessionAttributes.currentAssignment.school = {name: "Colorado School of Mines"};
+          sessionAttributes.currentAssignment.task = "look at ";
         }
         
         console.log(sessionAttributes);
