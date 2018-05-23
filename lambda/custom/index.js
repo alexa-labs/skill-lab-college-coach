@@ -8,7 +8,7 @@ const RatingIntentHandler = {
     return handlerInput.requestEnvelope.request.type === 'IntentRequest' &&
             handlerInput.requestEnvelope.request.intent.name === 'RatingIntent';
   },
-  handle(handlerInput){
+  async handle(handlerInput){
     const intentName = handlerInput.requestEnvelope.request.intent.name;
 
     const filledSlots = handlerInput.requestEnvelope.request.intent.slots;
@@ -18,6 +18,8 @@ const RatingIntentHandler = {
     const sessionAttributes = attributesManager.getSessionAttributes();
     
     console.log("Rating Intent Handler: " + sessionAttributes);
+    attributesManager.setPersistentAttributes(sessionAttributes);
+    await attributesManager.savePersistentAttributes();
 
     let currentAssignment = sessionAttributes.currentAssignment;
     let ratingResponse;
@@ -123,9 +125,14 @@ const HasAssignmentLaunchRequestHandler = {
 
     let currentAssignment = sessionAttributes.currentAssignment;
 
-    const speechOutput = getGreeting() + getStreak() + 'Your assignment from last time was' + ' ' 
-                        + currentAssignment.task +  ' ' + currentAssignment.school.name;
+    //TODO: Create a Join Function for Adding Spaces between Sentence Fragments
+    const speechOutput = getGreeting() + getStreak() + 'Your assignment from last time was to' + ' ' 
+                        + currentAssignment.task +  ' ' + currentAssignment.school.name + '. ';
+    //TODO: Make this Random
+    const ratingPrompt = 'On a scale of one through five, what did you think?';                   
     const reprompt = currentAssignment.prompt;
+
+    speechOutput += ratingPrompt;
 
     return handlerInput.responseBuilder
       .speak(speechOutput)
@@ -265,16 +272,12 @@ const InitializeSession = {
     const attributesManager = handlerInput.attributesManager;
     const sessionAttributes = attributesManager.getSessionAttributes();
 
-    console.log("Interceptor says hello");
-    console.log(sessionAttributes);
-
       if (Object.keys(sessionAttributes).length === 0) {
           sessionAttributes.currentAssignment = {};
           sessionAttributes.currentAssignment.school = {name: "Colorado School of Mines"};
           sessionAttributes.currentAssignment.task = "look at ";
         }
         
-        console.log(sessionAttributes);
         attributesManager.setSessionAttributes(sessionAttributes);
       } 
   }
@@ -300,6 +303,8 @@ exports.handler = skillBuilder
     RequestHandlerChainErrorHandler,
     ErrorHandler
   )
+  .withTableName('CollegeCoach_Cust')
+  .withAutoCreateTable(true)
   .addRequestInterceptors(
     InitializeSession
   )
