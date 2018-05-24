@@ -16,10 +16,9 @@ const RatingIntentHandler = {
 
     const attributesManager = handlerInput.attributesManager;
     const sessionAttributes = attributesManager.getSessionAttributes();
-    
-    console.log("Rating Intent Handler: " + sessionAttributes);
-    attributesManager.setPersistentAttributes(sessionAttributes);
-    await attributesManager.savePersistentAttributes();
+
+    attributesManager.setSessionAttributes(sessionAttributes);
+    persistentAttributes = await attributesManager.getPersistentAttributes();
 
     let currentAssignment = sessionAttributes.currentAssignment;
     let ratingResponse;
@@ -50,12 +49,37 @@ const InProgressProfileIntentHandler = {
             handlerInput.requestEnvelope.request.intent.name === 'ProfileIntent' &&
             handlerInput.requestEnvelope.request.dialogState !== 'COMPLETED';
   },
-  handle(handlerInput){
+  async handle(handlerInput){
     const intentName = handlerInput.requestEnvelope.request.intent.name;
-    //TODO: Echo the Slots
+
+    const filledSlots = handlerInput.requestEnvelope.request.intent.slots;
+    const slotValues = getSlotValues(filledSlots);
+
+    const attributesManager = handlerInput.attributesManager;
+    const sessionAttributes = attributesManager.getSessionAttributes();
+
+    attributesManager.setSessionAttributes(sessionAttributes);
+    persistentAttributes = await attributesManager.getPersistentAttributes();
+
+    let profile = sessionAttributes.profile;
+
+    //TODO: Loop through slotValues object to add key,value to profile.searchRefinement
+
+    for(slotValue in slotValues) {
+      console.log('~~~~~~~~~~~~~~~~SLOT~~~~~~~~~~~~~~');
+      console.log(slotValue);
+      console.log(slotValues.slotValue.id);
+    }
+    //TODO: Save/PersistentAttributes
+    //TODO: Update Search based on new searchRefinements
+    //TODO: Prompt with next school + task
+
+    let speechOutput;
+    let reprompt;
+
     return handlerInput.responseBuilder
-      .speak('In Progress: ' + intentName)
-      .reprompt('Reprompt Text')
+      .speak(speechOutput)
+      .reprompt(reprompt)
       .getResponse();
   }
 };
@@ -126,7 +150,7 @@ const HasAssignmentLaunchRequestHandler = {
     let currentAssignment = sessionAttributes.currentAssignment;
 
     //TODO: Create a Join Function for Adding Spaces between Sentence Fragments
-    const speechOutput = getGreeting() + getStreak() + 'Your assignment from last time was to' + ' ' 
+    let speechOutput = getGreeting() + getStreak() + 'Your assignment from last time was to' + ' ' 
                         + currentAssignment.task +  ' ' + currentAssignment.school.name + '. ';
     //TODO: Make this Random
     const ratingPrompt = 'On a scale of one through five, what did you think?';                   
@@ -174,7 +198,8 @@ const RequestHandlerChainErrorHandler = {
     return error.message === 'RequestHandlerChain not found!';
   },
   handle(handlerInput, error) {
-    console.log('Error handled: ' + error.message);
+    console.log('Error handled: ' + error.message 
+      + ' intent: ' + (handlerInput.requestEnvelope.request.type == 'IntentRequest' ? handlerInput.requestEnvelope.request.intent.name : "LaunchRequest" ) );
 
     return handlerInput.responseBuilder
       .speak('Oops! Looks like you forgot to register a handler again')
@@ -188,7 +213,10 @@ const ErrorHandler = {
     return true;
   },
   handle(handlerInput, error) {
-    console.log('Error handled: ' + error.message);
+    console.log('Error handled: '  
+    + ' intent: ' + (handlerInput.requestEnvelope.request.type == 'IntentRequest' ? handlerInput.requestEnvelope.request.intent.name : "LaunchRequest" ) 
+    + ' message: ' + error.message
+  );
 
     return handlerInput.responseBuilder
       .speak('Sorry, an error occurred.')
@@ -268,17 +296,26 @@ function getSlotValues(filledSlots) {
 //** Interceptors */
 
 const InitializeSession = {
-  process (handlerInput) {
+  async process (handlerInput) {
     const attributesManager = handlerInput.attributesManager;
     const sessionAttributes = attributesManager.getSessionAttributes();
 
       if (Object.keys(sessionAttributes).length === 0) {
+        sessionAttributes.profile = {};
+          sessionAttributes.profile.counter = 1;
+          sessionAttributes.profile.searchRefinements = { 
+                                                          major: 'engineering_technology',
+                                                          state: 'CO'
+                                                        }
+
           sessionAttributes.currentAssignment = {};
-          sessionAttributes.currentAssignment.school = {name: "Colorado School of Mines"};
+          sessionAttributes.currentAssignment.school = {
+                                                          name: "Colorado School of Mines"
+                                                       };
           sessionAttributes.currentAssignment.task = "look at ";
         }
         
-        attributesManager.setSessionAttributes(sessionAttributes);
+
       } 
   }
 
@@ -299,12 +336,12 @@ exports.handler = skillBuilder
     HasAssignmentLaunchRequestHandler,
     LaunchRequestHandler
   )
+  .withTableName('CollegeCoach_Cust')
+  .withAutoCreateTable(true)
   .addErrorHandlers(
     RequestHandlerChainErrorHandler,
     ErrorHandler
   )
-  .withTableName('CollegeCoach_Cust')
-  .withAutoCreateTable(true)
   .addRequestInterceptors(
     InitializeSession
   )
