@@ -303,6 +303,8 @@ const InitializeSession = {
       if (Object.keys(sessionAttributes).length === 0) {
         sessionAttributes.profile = {};
           sessionAttributes.profile.counter = 1;
+
+          //https://collegescorecard.ed.gov/search/?major=engineering_technology&state=CO&sort=advantage:desc
           sessionAttributes.profile.searchRefinements = { 
                                                           major: 'engineering_technology',
                                                           state: 'CO'

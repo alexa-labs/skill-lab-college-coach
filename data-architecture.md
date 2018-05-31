@@ -1,4 +1,4 @@
-# Mock Data Tables
+# Data Architecture Tables
 
 ### Profile Table
 Customer Specific Data
@@ -9,7 +9,7 @@ currentAssignment.taskId: number
 currentAssignment.school: string
 currentAssignment.timedTask: boolean
 currentAssignment.timedTaskId: number
-searchRefinements[0]: object (paramKey, paramValue, slotName, refinementId)
+searchRefinements[0]: object ((paramKey : paramValue), slotName, refinementId)
 streak: number
 applicationDate: number
 ```
@@ -29,6 +29,8 @@ Meta Time sensitive tasks e.g.: SATs, submission dates
 ```
 timedTask: boolean
 timedTaskId: number (HashKey)
+affordanceDate: number
+affordanceMessage: string
 taskMessage: string
 reprompt: string
 ```

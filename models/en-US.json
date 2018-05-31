@@ -1,294 +1,400 @@
 {
-  "interactionModel": {
-    "languageModel": {
-      "invocationName": "college coach",
-      "intents": [
-        {
-          "name": "AMAZON.CancelIntent",
-          "samples": []
+    "interactionModel": {
+        "languageModel": {
+            "invocationName": "college coach",
+            "intents": [
+                {
+                    "name": "AMAZON.CancelIntent",
+                    "samples": []
+                },
+                {
+                    "name": "AMAZON.HelpIntent",
+                    "samples": []
+                },
+                {
+                    "name": "AMAZON.StopIntent",
+                    "samples": []
+                },
+                {
+                    "name": "ProfileIntent",
+                    "slots": [
+                        {
+                            "name": "state",
+                            "type": "AMAZON.US_STATE",
+                            "samples": [
+                                "go to school in {state}"
+                            ]
+                        },
+                        {
+                            "name": "major",
+                            "type": "MajorType",
+                            "samples": [
+                                "study {major}"
+                            ]
+                        },
+                        {
+                            "name": "size",
+                            "type": "SizeType",
+                            "samples": [
+                                "a {size} school"
+                            ]
+                        },
+                        {
+                            "name": "teen_angst",
+                            "type": "TeenAngstType"
+                        }
+                    ],
+                    "samples": [
+                        "{teen_angst}",
+                        "i prefer {size} schools",
+                        "{size} one",
+                        "a {size} school",
+                        "{size}",
+                        "{major} programs",
+                        "i'd like to study {major}",
+                        "{major}",
+                        "go to school in {state}",
+                        "i'd like to live in {state}",
+                        "{state}"
+                    ]
+                },
+                {
+                    "name": "RatingIntent",
+                    "slots": [
+                        {
+                            "name": "rating_number",
+                            "type": "AMAZON.NUMBER"
+                        },
+                        {
+                            "name": "rating_sentiment",
+                            "type": "RatingSentimentType"
+                        }
+                    ],
+                    "samples": [
+                        "i think it's {rating_sentiment}",
+                        "{rating_sentiment} place",
+                        "i thought {rating_sentiment}",
+                        "it was {rating_sentiment}",
+                        "{rating_sentiment}",
+                        "{rating_number}",
+                        "{rating_number} out of five"
+                    ]
+                }
+            ],
+            "types": [
+                {
+                    "name": "MajorType",
+                    "values": [
+                        {
+                            "id": "parks_recreation_fitness",
+                            "name": {
+                                "value": "Parks, Recreation, Leisure, and Fitness Studies"
+                            }
+                        },
+                        {
+                            "id": "history",
+                            "name": {
+                                "value": "history"
+                            }
+                        },
+                        {
+                            "id": "education",
+                            "name": {
+                                "value": "education"
+                            }
+                        },
+                        {
+                            "id": "engineering_technology",
+                            "name": {
+                                "value": "engineering",
+                                "synonyms": [
+                                    "E.E.",
+                                    "chem e",
+                                    "chemical",
+                                    "electrical",
+                                    "engineering",
+                                    "mech e",
+                                    "M.E. "
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "SizeType",
+                    "values": [
+                        {
+                            "id": "large",
+                            "name": {
+                                "value": "large",
+                                "synonyms": [
+                                    "venti",
+                                    "gargantuan",
+                                    "huge"
+                                ]
+                            }
+                        },
+                        {
+                            "id": "medium",
+                            "name": {
+                                "value": "medium",
+                                "synonyms": [
+                                    "mid sized",
+                                    "grande"
+                                ]
+                            }
+                        },
+                        {
+                            "id": "small",
+                            "name": {
+                                "value": "small",
+                                "synonyms": [
+                                    "nanoscale",
+                                    "tiny",
+                                    "tall"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "TeenAngstType",
+                    "values": [
+                        {
+                            "name": {
+                                "value": "does it matter"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "i don't care"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "i don't know"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "whatever"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "RatingSentimentType",
+                    "values": [
+                        {
+                            "id": "0",
+                            "name": {
+                                "value": "none",
+                                "synonyms": [
+                                    "i don't care",
+                                    "not sure",
+                                    "i don't know"
+                                ]
+                            }
+                        },
+                        {
+                            "id": "1",
+                            "name": {
+                                "value": "low",
+                                "synonyms": [
+                                    "yuck",
+                                    "hurts me",
+                                    "bad",
+                                    "terrible",
+                                    "the worst thing ever",
+                                    "i hate it"
+                                ]
+                            }
+                        },
+                        {
+                            "id": "3",
+                            "name": {
+                                "value": "med",
+                                "synonyms": [
+                                    "alright",
+                                    "fine",
+                                    "nothing special",
+                                    "meh",
+                                    "okay"
+                                ]
+                            }
+                        },
+                        {
+                            "id": "5",
+                            "name": {
+                                "value": "high",
+                                "synonyms": [
+                                    "bodacious",
+                                    "radical",
+                                    "tubular",
+                                    "great",
+                                    "really good",
+                                    "best",
+                                    "my favorite",
+                                    "love it",
+                                    "rocked"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "AMAZON.US_STATE",
+                    "values": [
+                        {
+                            "id": "OH",
+                            "name": {
+                                "value": "Ohio"
+                            }
+                        },
+                        {
+                            "id": "NV",
+                            "name": {
+                                "value": "Nevada"
+                            }
+                        },
+                        {
+                            "id": "CA",
+                            "name": {
+                                "value": "California"
+                            }
+                        },
+                        {
+                            "id": "CO",
+                            "name": {
+                                "value": "Colorado"
+                            }
+                        },
+                        {
+                            "id": "WA",
+                            "name": {
+                                "value": "Washington"
+                            }
+                        }
+                    ]
+                }
+            ]
         },
-        {
-          "name": "AMAZON.HelpIntent",
-          "samples": []
+        "dialog": {
+            "intents": [
+                {
+                    "name": "ProfileIntent",
+                    "confirmationRequired": false,
+                    "prompts": {},
+                    "slots": [
+                        {
+                            "name": "state",
+                            "type": "AMAZON.US_STATE",
+                            "confirmationRequired": false,
+                            "elicitationRequired": true,
+                            "prompts": {
+                                "elicitation": "Elicit.Slot.1238634405833.144683112599"
+                            }
+                        },
+                        {
+                            "name": "major",
+                            "type": "MajorType",
+                            "confirmationRequired": false,
+                            "elicitationRequired": true,
+                            "prompts": {
+                                "elicitation": "Elicit.Slot.1238634405833.1421860560262"
+                            }
+                        },
+                        {
+                            "name": "size",
+                            "type": "SizeType",
+                            "confirmationRequired": false,
+                            "elicitationRequired": true,
+                            "prompts": {
+                                "elicitation": "Elicit.Slot.1238634405833.1380412480841"
+                            }
+                        },
+                        {
+                            "name": "teen_angst",
+                            "type": "TeenAngstType",
+                            "confirmationRequired": false,
+                            "elicitationRequired": false,
+                            "prompts": {}
+                        }
+                    ]
+                },
+                {
+                    "name": "RatingIntent",
+                    "confirmationRequired": false,
+                    "prompts": {},
+                    "slots": [
+                        {
+                            "name": "rating_number",
+                            "type": "AMAZON.NUMBER",
+                            "confirmationRequired": false,
+                            "elicitationRequired": false,
+                            "prompts": {}
+                        },
+                        {
+                            "name": "rating_sentiment",
+                            "type": "RatingSentimentType",
+                            "confirmationRequired": false,
+                            "elicitationRequired": false,
+                            "prompts": {}
+                        }
+                    ]
+                }
+            ]
         },
-        {
-          "name": "AMAZON.StopIntent",
-          "samples": []
-        },
-        {
-          "name": "ProfileIntent",
-          "slots": [
+        "prompts": [
             {
-              "name": "location",
-              "type": "AMAZON.US_STATE",
-              "samples": [
-                "go to school in {location}"
-              ]
-            },
-            {
-              "name": "degree",
-              "type": "DegreeType",
-              "samples": [
-                "study {degree}"
-              ]
-            },
-            {
-              "name": "size",
-              "type": "SizeType",
-              "samples": [
-                "a {size} school"
-              ]
-            },
-            {
-              "name": "teen_angst",
-              "type": "TeenAngstType"
-            }
-          ],
-          "samples": [
-            "{teen_angst}",
-            "i prefer {size} schools",
-            "{size} one",
-            "a {size} school",
-            "{size}",
-            "{degree} programs",
-            "i'd like to study {degree}",
-            "{degree}",
-            "go to school in {location}",
-            "i'd like to live in {location}",
-            "{location}"
-          ]
-        },
-        {
-          "name": "RatingIntent",
-          "slots": [
-            {
-              "name": "rating",
-              "type": "AMAZON.NUMBER",
-              "samples": [
-                "{rating} out of five",
-                "{rating}"
-              ]
-            }
-          ],
-          "samples": [
-            "it hurts me",
-            "i like it",
-            "{rating}",
-            "{rating} out of five"
-          ]
-        }
-      ],
-      "types": [
-        {
-          "values": [
-            {
-              "id": "parks_recreation_fitness",
-              "name": {
-                "value": "Parks, Recreation, Leisure, and Fitness Studies"
-              }
-            },
-            {
-              "id": "history",
-              "name": {
-                "value": "history"
-              }
-            },
-            {
-              "id": "education",
-              "name": {
-                "value": "education"
-              }
-            },
-            {
-              "id": "engineering_technology",
-              "name": {
-                "value": "engineering",
-                "synonyms": [
-                  "E.E.",
-                  "chem e",
-                  "chemical",
-                  "electrical",
-                  "engineering",
-                  "mech e",
-                  "M.E. "
+                "id": "Confirm.Intent.1238634405833",
+                "variations": [
+                    {
+                        "type": "PlainText",
+                        "value": "Yes or no?"
+                    }
                 ]
-              }
-            }
-          ],
-          "name": "DegreeType"
-        },
-        {
-          "values": [
+            },
             {
-              "id": "large",
-              "name": {
-                "value": "large",
-                "synonyms": [
-                  "venti",
-                  "gargantuan",
-                  "huge"
+                "id": "Elicit.Slot.1238634405833.144683112599",
+                "variations": [
+                    {
+                        "type": "PlainText",
+                        "value": "What state would you prefer your school's in?"
+                    },
+                    {
+                        "type": "PlainText",
+                        "value": "Where would you like to go to school?"
+                    }
                 ]
-              }
             },
             {
-              "id": "medium",
-              "name": {
-                "value": "medium",
-                "synonyms": [
-                  "mid sized",
-                  "grande"
+                "id": "Elicit.Slot.1238634405833.1421860560262",
+                "variations": [
+                    {
+                        "type": "PlainText",
+                        "value": "What would you like to study?"
+                    }
                 ]
-              }
             },
             {
-              "id": "small",
-              "name": {
-                "value": "small",
-                "synonyms": [
-                  "nanoscale",
-                  "tiny",
-                  "tall"
+                "id": "Elicit.Slot.1238634405833.1380412480841",
+                "variations": [
+                    {
+                        "type": "PlainText",
+                        "value": "What size of a school what you like to attend?"
+                    }
                 ]
-              }
+            },
+            {
+                "id": "Elicit.Slot.794758819773.934550122928",
+                "variations": [
+                    {
+                        "type": "PlainText",
+                        "value": "On a scale of one to five, how would you rate this?"
+                    }
+                ]
             }
-          ],
-          "name": "SizeType"
-        },
-        {
-          "values": [
-            {
-              "name": {
-                "value": "does it matter"
-              }
-            },
-            {
-              "name": {
-                "value": "i don't care"
-              }
-            },
-            {
-              "name": {
-                "value": "i don't know"
-              }
-            },
-            {
-              "name": {
-                "value": "whatever"
-              }
-            }
-          ],
-          "name": "TeenAngstType"
-        }
-      ]
-    },
-    "dialog": {
-      "intents": [
-        {
-          "name": "ProfileIntent",
-          "confirmationRequired": false,
-          "slots": [
-            {
-              "name": "location",
-              "type": "AMAZON.US_STATE",
-              "elicitationRequired": true,
-              "confirmationRequired": false,
-              "prompts": {
-                "elicitation": "Elicit.Slot.1238634405833.144683112599"
-              }
-            },
-            {
-              "name": "degree",
-              "type": "DegreeType",
-              "elicitationRequired": true,
-              "confirmationRequired": false,
-              "prompts": {
-                "elicitation": "Elicit.Slot.1238634405833.1421860560262"
-              }
-            },
-            {
-              "name": "size",
-              "type": "SizeType",
-              "elicitationRequired": true,
-              "confirmationRequired": false,
-              "prompts": {
-                "elicitation": "Elicit.Slot.1238634405833.1380412480841"
-              }
-            },
-            {
-              "name": "teen_angst",
-              "type": "TeenAngstType",
-              "elicitationRequired": false,
-              "confirmationRequired": false
-            }
-          ]
-        },
-        {
-          "name": "RatingIntent",
-          "confirmationRequired": false,
-          "slots": [
-            {
-              "name": "rating",
-              "type": "AMAZON.NUMBER",
-              "elicitationRequired": true,
-              "confirmationRequired": false,
-              "prompts": {
-                "elicitation": "Elicit.Slot.794758819773.934550122928"
-              }
-            }
-          ]
-        }
-      ]
-    },
-    "prompts": [
-      {
-        "id": "Confirm.Intent.1238634405833",
-        "variations": [
-          {
-            "type": "PlainText",
-            "value": "Yes or no?"
-          }
         ]
-      },
-      {
-        "id": "Elicit.Slot.1238634405833.144683112599",
-        "variations": [
-          {
-            "type": "PlainText",
-            "value": "What state would you prefer your school's in?"
-          },
-          {
-            "type": "PlainText",
-            "value": "Where would you like to go to school?"
-          }
-        ]
-      },
-      {
-        "id": "Elicit.Slot.1238634405833.1421860560262",
-        "variations": [
-          {
-            "type": "PlainText",
-            "value": "What would you like to study?"
-          }
-        ]
-      },
-      {
-        "id": "Elicit.Slot.1238634405833.1380412480841",
-        "variations": [
-          {
-            "type": "PlainText",
-            "value": "What size of a school what you like to attend?"
-          }
-        ]
-      },
-      {
-        "id": "Elicit.Slot.794758819773.934550122928",
-        "variations": [
-          {
-            "type": "PlainText",
-            "value": "On a scale of one to five, how would you rate this?"
-          }
-        ]
-      }
-    ]
-  }
+    }
 }
