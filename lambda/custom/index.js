@@ -3,6 +3,8 @@
 
 const Alexa = require('ask-sdk');
 
+const Scorecard = require('scorecard.js');
+
 const RatingIntentHandler = {
   canHandle(handlerInput){
     return handlerInput.requestEnvelope.request.type === 'IntentRequest' &&
@@ -65,10 +67,13 @@ const InProgressProfileIntentHandler = {
 
     //TODO: Loop through slotValues object to add key,value to profile.searchRefinement
 
-    for(slotValue in slotValues) {
+    for(key in slotValues) {
       console.log('~~~~~~~~~~~~~~~~SLOT~~~~~~~~~~~~~~');
-      console.log(slotValue);
-      console.log(slotValues.slotValue.id);
+      console.log(key);
+      console.log(slotValues[key]);
+      if (slotValues[key].id) {
+        // save the attribute
+      }
     }
     //TODO: Save/PersistentAttributes
     //TODO: Update Search based on new searchRefinements
@@ -148,6 +153,19 @@ const HasAssignmentLaunchRequestHandler = {
     const sessionAttributes = attributesManager.getSessionAttributes();
 
     let currentAssignment = sessionAttributes.currentAssignment;
+    var parameterMap = {
+      'school.state' : 'CO',
+      'school.operating' : '1' ,
+      '2015.academics.program.degree.engineering' : '1',
+      '2015.academics.program_available.assoc_or_bachelors' : 'true'
+    };
+    const scorecard = new Scorecard();
+    
+    scorecard.listAllSchools(parameterMap).then(function(jsonResponse) {
+      console.log(JSON.stringify(jsonResponse));
+    });
+
+    
 
     //TODO: Create a Join Function for Adding Spaces between Sentence Fragments
     let speechOutput = getGreeting() + getStreak() + 'Your assignment from last time was to' + ' ' 

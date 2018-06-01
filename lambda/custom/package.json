@@ -9,6 +9,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "ask-sdk": "^2.0.5"
+    "ask-sdk": "^2.0.5",
+    "request": "^2.87.0",
+    "request-promise": "^4.2.2"
   }
 }
