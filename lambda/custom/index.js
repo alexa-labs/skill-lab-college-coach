@@ -45,6 +45,71 @@ const RatingIntentHandler = {
   }
 };
 
+const CFIRAboutSchoolIntentHandler = {
+  canHandle(handlerInput) {
+    return handlerInput.requestEnvelope.request.type === 'CanFulfillIntentRequest'
+      && handlerInput.requestEnvelope.request.intent.name === 'AboutSchoolIntent'
+  },
+  handle(handlerInput) {
+    console.log("in CFIRAboutSchoolIntentHandler");
+    const slotValues = getSlotValues(handlerInput.requestEnvelope.request.intent.slots);
+
+    console.log('slot values:', JSON.stringify(slotValues));
+    const school = slotValues.school;
+
+    console.log("school", school.value);
+
+    console.log('isValidated', school.isValidated);
+
+    if (school.isValidated) {
+      console.log('valid!!');
+      handlerInput.responseBuilder
+      .withCanFulfillIntent({
+        "canFulfill": "YES",
+        "slots": {
+          "school": {
+            "canUnderstand": "YES",
+            "canFulfill": "YES"
+          }
+        }
+      });
+    } else {
+      console.log('invalid');
+      handlerInput.responseBuilder
+        .withCanFulfillIntent({
+          "canFulfill": "YES",
+          "slots": {
+            "school": {
+              "canUnderstand": "NO",
+              "canFulfill": "MAYBE"
+            }
+          }
+        });
+    }
+
+    console.log('response: ', JSON.stringify(handlerInput.responseBuilder.getResponse()));
+
+    return handlerInput.responseBuilder
+        //.speak("About School Intent " + school)
+        .getResponse();
+  }
+};
+
+const AboutSchoolIntentHandler = {
+  canHandle(handlerInput) {
+    return handlerInput.requestEnvelope.request.type === 'IntentRequest'
+      && handlerInput.requestEnvelope.request.name === 'AboutSchoolIntent'
+  },
+  handle(handlerInput) {
+    const slotValues = getSlotValues(this.handlerInput.requestEnvelope.request.intent.slots);
+
+    const school = slotValues.school;
+    return handlerInput.responseBuilder
+      .speak("About School Intent" + school.value)
+      .getResponse();
+  }
+};
+
 const InProgressProfileIntentHandler = {
   canHandle(handlerInput){
     return handlerInput.requestEnvelope.request.type === 'IntentRequest' &&
@@ -138,9 +203,9 @@ const IntentReflectorHandler = {
 const HasAssignmentLaunchRequestHandler = {
   canHandle(handlerInput){
     const attributesManager = handlerInput.attributesManager;
-    console.log(" Can Handle attributes Manager ");
+    // console.log(" Can Handle attributes Manager ");
     const sessionAttributes = attributesManager.getSessionAttributes();
-    console.log("sessionAttributes from HasAssignment: " + JSON.stringify(sessionAttributes));
+    // console.log("sessionAttributes from HasAssignment: " + JSON.stringify(sessionAttributes));
 
     return handlerInput.requestEnvelope.request.type === 'LaunchRequest' &&
             sessionAttributes &&
@@ -205,6 +270,25 @@ const SessionEndedReflectorHandler = {
     console.log('~~~~~~~~~~~~~~~~~~~');
     console.log(requestType+ ' '+sessionEndedReason);
     console.log('~~~~~~~~~~~~~~~~~~~');
+  }
+};
+
+const CFIRError = {
+  canHandle(handlerInput, error) {
+    return handlerInput.requestEnvelope.request.type === 'CanFulfillIntentRequest';
+  },
+  handle(handlerInput, error) {
+    return handlerInput.responseBuilder
+      .withCanFulfillIntent({
+        "canFulfill": "NO",
+        "slots": {
+          "school": {
+            "canUnderstand": "NO",
+            "canFulfill": "NO"
+          }
+        }
+      })
+      .getResponse();
   }
 };
 
@@ -349,6 +433,8 @@ const skillBuilder = Alexa.SkillBuilders.standard();
 exports.handler = skillBuilder
   .addRequestHandlers(
     RatingIntentHandler,
+    CFIRAboutSchoolIntentHandler,
+    AboutSchoolIntentHandler,
     InProgressProfileIntentHandler,
     CompleteProfileIntentHandler,
     DenyProfileIntentHandler,
@@ -359,6 +445,7 @@ exports.handler = skillBuilder
   .withTableName('CollegeCoach_Cust')
   .withAutoCreateTable(true)
   .addErrorHandlers(
+    CFIRError,
     RequestHandlerChainErrorHandler,
     ErrorHandler
   )
