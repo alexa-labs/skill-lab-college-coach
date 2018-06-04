@@ -45,65 +45,74 @@ const RatingIntentHandler = {
   }
 };
 
-const CFIRAboutSchoolIntentHandler = {
-  canHandle(handlerInput) {
-    return handlerInput.requestEnvelope.request.type === 'CanFulfillIntentRequest'
-      && handlerInput.requestEnvelope.request.intent.name === 'AboutSchoolIntent'
-  },
-  handle(handlerInput) {
-    console.log("in CFIRAboutSchoolIntentHandler");
-    const slotValues = getSlotValues(handlerInput.requestEnvelope.request.intent.slots);
+// const CFIRAboutSchoolIntentHandler = {
+//   canHandle(handlerInput) {
+//     return handlerInput.requestEnvelope.request.type === 'CanFulfillIntentRequest'
+//       && handlerInput.requestEnvelope.request.intent.name === 'AboutSchoolIntent'
+//   },
+//   handle(handlerInput) {
+//     console.log("in CFIRAboutSchoolIntentHandler");
+//     const slotValues = getSlotValues(handlerInput.requestEnvelope.request.intent.slots);
 
-    console.log('slot values:', JSON.stringify(slotValues));
-    const school = slotValues.school;
+//     console.log('slot values:', JSON.stringify(slotValues));
+//     const school = slotValues.school;
 
-    console.log("school", school.value);
+//     console.log("school", school.value);
 
-    console.log('isValidated', school.isValidated);
+//     console.log('isValidated', school.isValidated);
 
-    if (school.isValidated) {
-      console.log('valid!!');
-      handlerInput.responseBuilder
-      .withCanFulfillIntent({
-        "canFulfill": "YES",
-        "slots": {
-          "school": {
-            "canUnderstand": "YES",
-            "canFulfill": "YES"
-          }
-        }
-      });
-    } else {
-      console.log('invalid');
-      handlerInput.responseBuilder
-        .withCanFulfillIntent({
-          "canFulfill": "YES",
-          "slots": {
-            "school": {
-              "canUnderstand": "NO",
-              "canFulfill": "MAYBE"
-            }
-          }
-        });
-    }
+//     if (school.isValidated) {
+//       console.log('valid!!');
+//       handlerInput.responseBuilder
+//       .withCanFulfillIntent({
+//         "canFulfill": "YES",
+//         "slots": {
+//           "school": {
+//             "canUnderstand": "YES",
+//             "canFulfill": "YES"
+//           }
+//         }
+//       });
+//     } else {
+//       console.log('invalid');
+//       handlerInput.responseBuilder
+//         .withCanFulfillIntent({
+//           "canFulfill": "YES",
+//           "slots": {
+//             "school": {
+//               "canUnderstand": "NO",
+//               "canFulfill": "MAYBE"
+//             }
+//           }
+//         });
+//     }
 
-    console.log('response: ', JSON.stringify(handlerInput.responseBuilder.getResponse()));
+//     console.log('response: ', JSON.stringify(handlerInput.responseBuilder.getResponse()));
 
-    return handlerInput.responseBuilder
-        //.speak("About School Intent " + school)
-        .getResponse();
-  }
-};
+//     return handlerInput.responseBuilder
+//         //.speak("About School Intent " + school)
+//         .getResponse();
+//   }
+// };
 
 const AboutSchoolIntentHandler = {
   canHandle(handlerInput) {
-    return handlerInput.requestEnvelope.request.type === 'IntentRequest'
-      && handlerInput.requestEnvelope.request.name === 'AboutSchoolIntent'
+    return (handlerInput.requestEnvelope.request.type === 'IntentRequest'
+      || handlerInput.requestEnvelope.request.type === 'CanFulfillIntentRequest')
+      && handlerInput.requestEnvelope.request.intent.name === 'AboutSchoolIntent'
   },
   handle(handlerInput) {
-    const slotValues = getSlotValues(this.handlerInput.requestEnvelope.request.intent.slots);
+    console.log('AboutSchoolIntentHandler');
+    
+    const slotValues = getSlotValues(handlerInput.requestEnvelope.request.intent.slots);
+
+    const attributesManager = handlerInput.attributesManager;
+    let attributes = attributesManager.getSessionAttributes();
+    attributes.slotValues = slotValues;
+    attributesManager.setSessionAttributes(attributes);
 
     const school = slotValues.school;
+
     return handlerInput.responseBuilder
       .speak("About School Intent" + school.value)
       .getResponse();
@@ -278,6 +287,7 @@ const CFIRError = {
     return handlerInput.requestEnvelope.request.type === 'CanFulfillIntentRequest';
   },
   handle(handlerInput, error) {
+    console.log('CFIRError', error.message);
     return handlerInput.responseBuilder
       .withCanFulfillIntent({
         "canFulfill": "NO",
@@ -289,6 +299,54 @@ const CFIRError = {
         }
       })
       .getResponse();
+  }
+};
+
+const CFIRResponseInterceptor = {
+  process(handlerInput) {
+
+    console.log('in CFIRResponseInterceptor');
+
+    console.log('type:', handlerInput.requestEnvelope.request.type);
+    console.log('intent:', handlerInput.requestEnvelope.request.intent.name)
+
+
+    if (handlerInput.requestEnvelope.request.type === 'CanFulfillIntentRequest'
+        && handlerInput.requestEnvelope.request.intent.name === 'AboutSchoolIntent') {
+      const attributesManager = handlerInput.attributesManager;
+      const attributes = attributesManager.getSessionAttributes();
+
+      if (!attributes.slotValues) {
+        console.log('no slots');
+        handlerInput.responseBuilder
+          .withCanFulfillIntent({
+            "canFulfill": "NO",
+            "slots": {
+              "school": {
+                "canUnderstand": "NO",
+                "canFulfill": "NO"
+              }
+            }
+          });
+      } else {
+        console.log('have slots');
+        let canFulfillIntent = {
+          "canFulfill": "YES",
+          "slots": {
+
+          }
+        };
+        const slotValues = attributes.slotValues;
+        for (slot in slotValues) {
+          canFulfillIntent.slots[slot] = {
+            "canUnderstand": slotValues[slot].canUnderstand,
+            "canFulfill": slotValues[slot].canFulfill
+          }
+        }
+        handlerInput.responseBuilder.withCanFulfillIntent(canFulfillIntent);
+      }
+      return handlerInput.responseBuilder.getResponse();
+    }
   }
 };
 
@@ -368,7 +426,9 @@ function getSlotValues(filledSlots) {
             synonym: filledSlots[item].value,
             value: filledSlots[item].resolutions.resolutionsPerAuthority[0].values[0].value.name,
             id: filledSlots[item].resolutions.resolutionsPerAuthority[0].values[0].value.id,
-            isValidated: true
+            isValidated: true,
+            canUnderstand: "YES",
+            canFulfill: "YES",
           };
           break;
         case 'ER_SUCCESS_NO_MATCH':
@@ -377,6 +437,8 @@ function getSlotValues(filledSlots) {
             value: filledSlots[item].value,
             id: null,
             isValidated: false,
+            canUnderstand: "NO",
+            canFulfill: "MAYBE",            
           };
           break;
         default:
@@ -387,7 +449,9 @@ function getSlotValues(filledSlots) {
         synonym: filledSlots[item].value,
         value: filledSlots[item].value,
         id: filledSlots[item].id,
-        isValidated: false
+        isValidated: false,
+        canUnderstand: "NO",
+        canFulfill: "NO",        
       };
     }
   }, this);
@@ -433,7 +497,7 @@ const skillBuilder = Alexa.SkillBuilders.standard();
 exports.handler = skillBuilder
   .addRequestHandlers(
     RatingIntentHandler,
-    CFIRAboutSchoolIntentHandler,
+    //CFIRAboutSchoolIntentHandler,
     AboutSchoolIntentHandler,
     InProgressProfileIntentHandler,
     CompleteProfileIntentHandler,
@@ -450,6 +514,9 @@ exports.handler = skillBuilder
     ErrorHandler
   )
   .addRequestInterceptors(
-    InitializeSession
+    InitializeSession,
+  )
+  .addResponseInterceptors(
+    CFIRResponseInterceptor,
   )
   .lambda();
