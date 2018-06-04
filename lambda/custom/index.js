@@ -3,6 +3,8 @@
 
 const Alexa = require('ask-sdk');
 
+const Scorecard = require('scorecard.js');
+
 const RatingIntentHandler = {
   canHandle(handlerInput){
     return handlerInput.requestEnvelope.request.type === 'IntentRequest' &&
@@ -43,6 +45,80 @@ const RatingIntentHandler = {
   }
 };
 
+// const CFIRAboutSchoolIntentHandler = {
+//   canHandle(handlerInput) {
+//     return handlerInput.requestEnvelope.request.type === 'CanFulfillIntentRequest'
+//       && handlerInput.requestEnvelope.request.intent.name === 'AboutSchoolIntent'
+//   },
+//   handle(handlerInput) {
+//     console.log("in CFIRAboutSchoolIntentHandler");
+//     const slotValues = getSlotValues(handlerInput.requestEnvelope.request.intent.slots);
+
+//     console.log('slot values:', JSON.stringify(slotValues));
+//     const school = slotValues.school;
+
+//     console.log("school", school.value);
+
+//     console.log('isValidated', school.isValidated);
+
+//     if (school.isValidated) {
+//       console.log('valid!!');
+//       handlerInput.responseBuilder
+//       .withCanFulfillIntent({
+//         "canFulfill": "YES",
+//         "slots": {
+//           "school": {
+//             "canUnderstand": "YES",
+//             "canFulfill": "YES"
+//           }
+//         }
+//       });
+//     } else {
+//       console.log('invalid');
+//       handlerInput.responseBuilder
+//         .withCanFulfillIntent({
+//           "canFulfill": "YES",
+//           "slots": {
+//             "school": {
+//               "canUnderstand": "NO",
+//               "canFulfill": "MAYBE"
+//             }
+//           }
+//         });
+//     }
+
+//     console.log('response: ', JSON.stringify(handlerInput.responseBuilder.getResponse()));
+
+//     return handlerInput.responseBuilder
+//         //.speak("About School Intent " + school)
+//         .getResponse();
+//   }
+// };
+
+const AboutSchoolIntentHandler = {
+  canHandle(handlerInput) {
+    return (handlerInput.requestEnvelope.request.type === 'IntentRequest'
+      || handlerInput.requestEnvelope.request.type === 'CanFulfillIntentRequest')
+      && handlerInput.requestEnvelope.request.intent.name === 'AboutSchoolIntent'
+  },
+  handle(handlerInput) {
+    console.log('AboutSchoolIntentHandler');
+    
+    const slotValues = getSlotValues(handlerInput.requestEnvelope.request.intent.slots);
+
+    const attributesManager = handlerInput.attributesManager;
+    let attributes = attributesManager.getSessionAttributes();
+    attributes.slotValues = slotValues;
+    attributesManager.setSessionAttributes(attributes);
+
+    const school = slotValues.school;
+
+    return handlerInput.responseBuilder
+      .speak("About School Intent" + school.value)
+      .getResponse();
+  }
+};
+
 const InProgressProfileIntentHandler = {
   canHandle(handlerInput){
     return handlerInput.requestEnvelope.request.type === 'IntentRequest' &&
@@ -65,10 +141,13 @@ const InProgressProfileIntentHandler = {
 
     //TODO: Loop through slotValues object to add key,value to profile.searchRefinement
 
-    for(slotValue in slotValues) {
+    for(key in slotValues) {
       console.log('~~~~~~~~~~~~~~~~SLOT~~~~~~~~~~~~~~');
-      console.log(slotValue);
-      console.log(slotValues.slotValue.id);
+      console.log(key);
+      console.log(slotValues[key]);
+      if (slotValues[key].id) {
+        // save the attribute
+      }
     }
     //TODO: Save/PersistentAttributes
     //TODO: Update Search based on new searchRefinements
@@ -133,9 +212,9 @@ const IntentReflectorHandler = {
 const HasAssignmentLaunchRequestHandler = {
   canHandle(handlerInput){
     const attributesManager = handlerInput.attributesManager;
-    console.log(" Can Handle attributes Manager ");
+    // console.log(" Can Handle attributes Manager ");
     const sessionAttributes = attributesManager.getSessionAttributes();
-    console.log("sessionAttributes from HasAssignment: " + JSON.stringify(sessionAttributes));
+    // console.log("sessionAttributes from HasAssignment: " + JSON.stringify(sessionAttributes));
 
     return handlerInput.requestEnvelope.request.type === 'LaunchRequest' &&
             sessionAttributes &&
@@ -148,6 +227,19 @@ const HasAssignmentLaunchRequestHandler = {
     const sessionAttributes = attributesManager.getSessionAttributes();
 
     let currentAssignment = sessionAttributes.currentAssignment;
+    var parameterMap = {
+      'school.state' : 'CO',
+      'school.operating' : '1' ,
+      '2015.academics.program.degree.engineering' : '1',
+      '2015.academics.program_available.assoc_or_bachelors' : 'true'
+    };
+    const scorecard = new Scorecard();
+    
+    scorecard.listAllSchools(parameterMap).then(function(jsonResponse) {
+      console.log(JSON.stringify(jsonResponse));
+    });
+
+    
 
     //TODO: Create a Join Function for Adding Spaces between Sentence Fragments
     let speechOutput = getGreeting() + getStreak() + 'Your assignment from last time was to' + ' ' 
@@ -187,6 +279,74 @@ const SessionEndedReflectorHandler = {
     console.log('~~~~~~~~~~~~~~~~~~~');
     console.log(requestType+ ' '+sessionEndedReason);
     console.log('~~~~~~~~~~~~~~~~~~~');
+  }
+};
+
+const CFIRError = {
+  canHandle(handlerInput, error) {
+    return handlerInput.requestEnvelope.request.type === 'CanFulfillIntentRequest';
+  },
+  handle(handlerInput, error) {
+    console.log('CFIRError', error.message);
+    return handlerInput.responseBuilder
+      .withCanFulfillIntent({
+        "canFulfill": "NO",
+        "slots": {
+          "school": {
+            "canUnderstand": "NO",
+            "canFulfill": "NO"
+          }
+        }
+      })
+      .getResponse();
+  }
+};
+
+const CFIRResponseInterceptor = {
+  process(handlerInput) {
+
+    console.log('in CFIRResponseInterceptor');
+
+    console.log('type:', handlerInput.requestEnvelope.request.type);
+    console.log('intent:', handlerInput.requestEnvelope.request.intent.name)
+
+
+    if (handlerInput.requestEnvelope.request.type === 'CanFulfillIntentRequest'
+        && handlerInput.requestEnvelope.request.intent.name === 'AboutSchoolIntent') {
+      const attributesManager = handlerInput.attributesManager;
+      const attributes = attributesManager.getSessionAttributes();
+
+      if (!attributes.slotValues) {
+        console.log('no slots');
+        handlerInput.responseBuilder
+          .withCanFulfillIntent({
+            "canFulfill": "NO",
+            "slots": {
+              "school": {
+                "canUnderstand": "NO",
+                "canFulfill": "NO"
+              }
+            }
+          });
+      } else {
+        console.log('have slots');
+        let canFulfillIntent = {
+          "canFulfill": "YES",
+          "slots": {
+
+          }
+        };
+        const slotValues = attributes.slotValues;
+        for (slot in slotValues) {
+          canFulfillIntent.slots[slot] = {
+            "canUnderstand": slotValues[slot].canUnderstand,
+            "canFulfill": slotValues[slot].canFulfill
+          }
+        }
+        handlerInput.responseBuilder.withCanFulfillIntent(canFulfillIntent);
+      }
+      return handlerInput.responseBuilder.getResponse();
+    }
   }
 };
 
@@ -266,7 +426,9 @@ function getSlotValues(filledSlots) {
             synonym: filledSlots[item].value,
             value: filledSlots[item].resolutions.resolutionsPerAuthority[0].values[0].value.name,
             id: filledSlots[item].resolutions.resolutionsPerAuthority[0].values[0].value.id,
-            isValidated: true
+            isValidated: true,
+            canUnderstand: "YES",
+            canFulfill: "YES",
           };
           break;
         case 'ER_SUCCESS_NO_MATCH':
@@ -275,6 +437,8 @@ function getSlotValues(filledSlots) {
             value: filledSlots[item].value,
             id: null,
             isValidated: false,
+            canUnderstand: "NO",
+            canFulfill: "MAYBE",            
           };
           break;
         default:
@@ -285,7 +449,9 @@ function getSlotValues(filledSlots) {
         synonym: filledSlots[item].value,
         value: filledSlots[item].value,
         id: filledSlots[item].id,
-        isValidated: false
+        isValidated: false,
+        canUnderstand: "NO",
+        canFulfill: "NO",        
       };
     }
   }, this);
@@ -331,6 +497,8 @@ const skillBuilder = Alexa.SkillBuilders.standard();
 exports.handler = skillBuilder
   .addRequestHandlers(
     RatingIntentHandler,
+    //CFIRAboutSchoolIntentHandler,
+    AboutSchoolIntentHandler,
     InProgressProfileIntentHandler,
     CompleteProfileIntentHandler,
     DenyProfileIntentHandler,
@@ -341,10 +509,14 @@ exports.handler = skillBuilder
   .withTableName('CollegeCoach_Cust')
   .withAutoCreateTable(true)
   .addErrorHandlers(
+    CFIRError,
     RequestHandlerChainErrorHandler,
     ErrorHandler
   )
   .addRequestInterceptors(
-    InitializeSession
+    InitializeSession,
+  )
+  .addResponseInterceptors(
+    CFIRResponseInterceptor,
   )
   .lambda();
