@@ -3,7 +3,8 @@
 
 const Alexa = require('ask-sdk');
 
-const Scorecard = require('scorecard.js');
+const Scorecard = require('./scorecard.js');
+const States = require('./states.js');
 
 const RatingIntentHandler = {
   canHandle(handlerInput){
@@ -113,9 +114,33 @@ const AboutSchoolIntentHandler = {
 
     const school = slotValues.school;
 
+    var parameterMap = {
+      'school.name' : school.value,
+      'school.operating' : '1' ,
+    };
+    const scorecard = new Scorecard();
+    
+    scorecard.getSchoolInformation(parameterMap).then(function(jsonResponse) {
+
+      let schoolName = jsonResponse.results[0]['school.name'];
+      let schoolCity = jsonResponse.results[0]['school.city'];
+      let schoolState = States[jsonResponse.results[0]['school.state']];
+      let schoolSize = jsonResponse.results[0]['2015.student.size'];
+      let schoolCompletionRate = jsonResponse.results[0]['2015.completion.rate_suppressed.overall'];
+      let schoolAvgNetPrice = jsonResponse.results[0]['2015.cost.avg_net_price.overall'];
+      // school.name is located school.city in school.state and has 2015.student.size students. 2015.completion.rate_suppressed.overall% of students 
+      // complete their degree with a cost of 2015.cost.avg_net_price.overall.
+
+      console.log('AboutSchoolIntent:', schoolName, schoolCity, schoolState, schoolSize, schoolCompletionRate, schoolAvgNetPrice);
+
+
+
+
+    });
+
     return handlerInput.responseBuilder
-      .speak("About School Intent" + school.value)
-      .getResponse();
+    .speak("About School Intent" + school.value)
+    .getResponse();
   }
 };
 
@@ -239,7 +264,7 @@ const HasAssignmentLaunchRequestHandler = {
       console.log(JSON.stringify(jsonResponse));
     });
 
-    
+    console.log('HasAssignmentLaunchRequestHandler:', JSON.stringify(currentAssignment.school));
 
     //TODO: Create a Join Function for Adding Spaces between Sentence Fragments
     let speechOutput = getGreeting() + getStreak() + 'Your assignment from last time was to' + ' ' 
@@ -308,7 +333,7 @@ const CFIRResponseInterceptor = {
     console.log('in CFIRResponseInterceptor');
 
     console.log('type:', handlerInput.requestEnvelope.request.type);
-    console.log('intent:', handlerInput.requestEnvelope.request.intent.name)
+    //console.log('intent:', handlerInput.requestEnvelope.request.intent.name)
 
 
     if (handlerInput.requestEnvelope.request.type === 'CanFulfillIntentRequest'
@@ -486,7 +511,6 @@ const InitializeSession = {
 
       } 
   }
-
 
 const skillBuilder = Alexa.SkillBuilders.standard();
 
