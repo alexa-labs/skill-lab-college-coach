@@ -102,9 +102,15 @@ const AboutSchoolIntentHandler = {
       || handlerInput.requestEnvelope.request.type === 'CanFulfillIntentRequest')
       && handlerInput.requestEnvelope.request.intent.name === 'AboutSchoolIntent'
   },
-  handle(handlerInput) {
+  async handle(handlerInput) {
     console.log('AboutSchoolIntentHandler');
     
+    // const response = disambiguateSlot(handlerInput);
+
+    // if (response) {
+    //   return response;
+    // }
+
     const slotValues = getSlotValues(handlerInput.requestEnvelope.request.intent.slots);
 
     const attributesManager = handlerInput.attributesManager;
@@ -120,26 +126,31 @@ const AboutSchoolIntentHandler = {
     };
     const scorecard = new Scorecard();
     
-    scorecard.getSchoolInformation(parameterMap).then(function(jsonResponse) {
+    let speechOutput = await scorecard.getSchoolInformation(parameterMap).then(function(jsonResponse) {
 
-      let schoolName = jsonResponse.results[0]['school.name'];
+      console.log('response:', JSON.stringify(jsonResponse));
+
+      // TODO: sort the array of results based upon 2015.student.size
+      // TODO: In our training data for every item that has a dash, add a top level entry for a flavor with no dash.
+
+      let schoolName = jsonResponse.results[0]['school.name'].split('-')[0];
       let schoolCity = jsonResponse.results[0]['school.city'];
       let schoolState = States[jsonResponse.results[0]['school.state']];
       let schoolSize = jsonResponse.results[0]['2015.student.size'];
-      let schoolCompletionRate = jsonResponse.results[0]['2015.completion.rate_suppressed.overall'];
-      let schoolAvgNetPrice = jsonResponse.results[0]['2015.cost.avg_net_price.overall'];
-      // school.name is located school.city in school.state and has 2015.student.size students. 2015.completion.rate_suppressed.overall% of students 
-      // complete their degree with a cost of 2015.cost.avg_net_price.overall.
+      let schoolCompletionRate = Math.round(jsonResponse.results[0]['2015.completion.rate_suppressed.overall'] * 100);
+      let schoolAvgNetPrice = Math.round(jsonResponse.results[0]['2015.cost.avg_net_price.overall'] / 1000) * 1000;
+
+      let speechOutput = schoolName + " is located in " + schoolCity + ', ' + schoolState + '. ';
+      speechOutput += schoolCompletionRate + '% of students complete their degree. With an annual cost of $';
+      speechOutput += schoolAvgNetPrice + '.';
 
       console.log('AboutSchoolIntent:', schoolName, schoolCity, schoolState, schoolSize, schoolCompletionRate, schoolAvgNetPrice);
 
-
-
-
+      return speechOutput;
     });
 
     return handlerInput.responseBuilder
-    .speak("About School Intent" + school.value)
+    .speak(speechOutput)
     .getResponse();
   }
 };
@@ -432,6 +443,48 @@ function getNextSearchRefinement() {
 };
 
 //** Cookbook */
+
+function disambiguateSlot(handlerInput) {
+  let currentIntent = handlerInput.requestEnvelope.request.intent;
+  for (const slotName in currentIntent.slots) {
+    if (Object.prototype.hasOwnProperty.call(currentIntent.slots, slotName)) {
+      const currentSlot = currentIntent.slots[slotName];
+      if (currentSlot.confirmationStatus !== 'CONFIRMED'
+        && currentSlot.resolutions
+        && currentSlot.resolutions.resolutionsPerAuthority[0]) {
+        if (currentSlot.resolutions.resolutionsPerAuthority[0].status.code === 'ER_SUCCESS_MATCH') {
+          if (currentSlot.resolutions.resolutionsPerAuthority[0].values.length > 1) {
+            prompt = 'Which would you like';
+            const length = currentSlot.resolutions.resolutionsPerAuthority[0].values.length;
+
+            currentSlot.resolutions.resolutionsPerAuthority[0].values
+              .forEach((element, index) => {
+                prompt += ` ${(index === length - 1) ? ' or' : ' '} ${element.value.name}`;
+              });
+
+            prompt += '?';
+
+            return handlerInput.responseBuilder
+              .speak(prompt)
+              .reprompt(prompt)
+              
+              .getResponse();
+          }
+        } else if (currentSlot.resolutions.resolutionsPerAuthority[0].status.code === 'ER_SUCCESS_NO_MATCH') {
+          if (requiredSlots.indexOf(currentSlot.name) > -1) {
+            prompt = `What ${currentSlot.name} are you looking for`;
+
+            return handlerInput.responseBuilder
+              .speak(prompt)
+              .reprompt(prompt)
+              .getResponse();
+          }
+        }
+      }
+    }
+  } 
+  return null;
+}
 
 function getSlotValues(filledSlots) {
   const slotValues = {};
