@@ -5,6 +5,7 @@ const Alexa = require('ask-sdk');
 
 const Scorecard = require('./scorecard.js');
 const States = require('./states.js');
+const UserSchools = require('./userSchools.js');
 
 const RatingIntentHandler = {
   canHandle(handlerInput){
@@ -27,6 +28,38 @@ const RatingIntentHandler = {
     let ratingResponse;
 
     const reprompt = 'From one through five, how would you rate the ' + currentAssignment.school.name;
+
+    userSchools = new UserSchools();
+
+    const userId = handlerInput.requestEnvelope.context.System.user.userId;
+
+    // TODO: move saving schools to where we assign a school/assignment
+    // userSchools.saveSchoolsForUser(userId, [sessionAttributes.currentAssignment.school.name], function(err, result) {
+    //  if(err) {
+    //    console.log(err);
+    //   } else {
+    //     console.log('saveSchoolsForUser', result);
+    //   }      
+    // });
+
+    let rating = slotValues.rating_number.value;
+    if(!rating) {
+      rating = slotValues.rating_sentiment.id;
+    }
+
+    rating = parseInt(rating);
+    
+    console.log('userId:', userId);
+
+    console.log('school assignment:', sessionAttributes.currentAssignment.school.name);
+
+    userSchools.updateRatingForSchool(userId, sessionAttributes.currentAssignment.school.name, rating, function(err, result) {
+      if(err) {
+        console.log(err);
+      } else {
+        console.log('updateRatingForSchool',result);
+      }
+    } );
 
     if (slotValues.rating_number.value > 3 || slotValues.rating_sentiment.id > 3) {
         ratingResponse = 'Great! Sounds like you liked the ' + currentAssignment.school.name;
