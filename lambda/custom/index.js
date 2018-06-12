@@ -15,6 +15,8 @@ const RatingIntentHandler = {
   async handle(handlerInput){
     const intentName = handlerInput.requestEnvelope.request.intent.name;
 
+    console.log(intentName);
+
     const filledSlots = handlerInput.requestEnvelope.request.intent.slots;
     const slotValues = getSlotValues(filledSlots);
 
@@ -42,35 +44,51 @@ const RatingIntentHandler = {
     //   }      
     // });
 
-    let rating = slotValues.rating_number.value;
-    if(!rating) {
-      rating = slotValues.rating_sentiment.id;
-    }
+    let isValidRating = true;
 
-    rating = parseInt(rating);
-    
-    console.log('userId:', userId);
-
-    console.log('school assignment:', sessionAttributes.currentAssignment.school.name);
-
-    userSchools.updateRatingForSchool(userId, sessionAttributes.currentAssignment.school.name, rating, function(err, result) {
-      if(err) {
-        console.log(err);
-      } else {
-        console.log('updateRatingForSchool',result);
-      }
-    } );
+    console.log('slot values: ', JSON.stringify(slotValues));
+    console.log('rating number <= 3', slotValues.rating_number.value <= 3);
+    console.log('rating sentiment id <= 3',slotValues.rating_sentiment.id <= 3);
 
     if (slotValues.rating_number.value > 3 || slotValues.rating_sentiment.id > 3) {
         ratingResponse = 'Great! Sounds like you liked the ' + currentAssignment.school.name;
-    } else if (slotValues.rating_number.value <= 3 || slotValues.rating_sentiment.id <= 3) {
+    } else if (slotValues.rating_number.value <= 3 || ( slotValues.rating_sentiment.isValidated && slotValues.rating_sentiment.id <= 3)) {
         ratingResponse = 'Ok. We\'ll find better matches for you next time. ';
     } else {
-        ratingResponse = 'Sorry, I\'m not sure what ' + slotValues.rating_sentiment.id
+        let misunderstoodValue = 'that'
+        if (!slotValues.rating_sentiment.isValidated) {
+          misunderstoodValue = slotValues.rating_sentiment.value;
+        }
+
+        ratingResponse = 'Sorry, I\'m not sure what ' + misunderstoodValue
         + ' means. ' + reprompt;
+
+        isValidRating = false;
     }
 
-    ratingResponse += getNextSearchRefinement();
+    if (isValidRating) {
+      let rating = slotValues.rating_number.value;
+      if(!rating) {
+        rating = slotValues.rating_sentiment.id;
+      }
+  
+      rating = parseInt(rating);
+      
+      console.log('userId:', userId);
+  
+      console.log('school assignment:', sessionAttributes.currentAssignment.school.name);
+  
+      userSchools.updateRatingForSchool(userId, sessionAttributes.currentAssignment.school.name, rating, function(err, result) {
+        if(err) {
+          console.log(err);
+        } else {
+          console.log('updateRatingForSchool',result);
+        }
+      } );
+      
+      // TODO: add sentence join function
+      ratingResponse += ' ' + getNextSearchRefinement();
+    }
 
     return handlerInput.responseBuilder
       .speak(ratingResponse)
