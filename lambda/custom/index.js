@@ -35,15 +35,6 @@ const RatingIntentHandler = {
 
     const userId = handlerInput.requestEnvelope.context.System.user.userId;
 
-    // TODO: move saving schools to where we assign a school/assignment
-    // userSchools.saveSchoolsForUser(userId, [sessionAttributes.currentAssignment.school.name], function(err, result) {
-    //  if(err) {
-    //    console.log(err);
-    //   } else {
-    //     console.log('saveSchoolsForUser', result);
-    //   }      
-    // });
-
     let isValidRating = true;
 
     console.log('slot values: ', JSON.stringify(slotValues));
@@ -240,12 +231,37 @@ const InProgressProfileIntentHandler = {
     //TODO: Update Search based on new searchRefinements
     //TODO: Prompt with next school + task
 
-    let speechOutput;
-    let reprompt;
+    const userId = handlerInput.requestEnvelope.context.System.user.userId;
+    userSchools = new UserSchools();
+
+    var parameterMap = {
+      'school.state' : slotValues.state.id,
+      'school.operating' : '1' ,
+      //'2015.academics.program.degree.engineering' : '1',
+      '2015.academics.program_available.assoc_or_bachelors' : 'true'
+    };
+    const scorecard = new Scorecard();
+    
+    scorecard.listAllSchools(parameterMap).then(function(jsonResponse) {
+      console.log(JSON.stringify(jsonResponse));
+
+      userSchools.saveSchoolsForUser(userId, [jsonResponse[0]], function(err, result) {
+      if(err) {
+        console.log(err);
+        } else {
+          console.log('saveSchoolsForUser', result);
+        }      
+      });  
+    });
+    
+
+    let speechOutput = 'hello there';
+    let reprompt = 'hi again';
 
     return handlerInput.responseBuilder
       .speak(speechOutput)
       .reprompt(reprompt)
+      //.addDelegateDirective()
       .getResponse();
   }
 };
@@ -314,17 +330,6 @@ const HasAssignmentLaunchRequestHandler = {
     const sessionAttributes = attributesManager.getSessionAttributes();
 
     let currentAssignment = sessionAttributes.currentAssignment;
-    var parameterMap = {
-      'school.state' : 'CO',
-      'school.operating' : '1' ,
-      '2015.academics.program.degree.engineering' : '1',
-      '2015.academics.program_available.assoc_or_bachelors' : 'true'
-    };
-    const scorecard = new Scorecard();
-    
-    scorecard.listAllSchools(parameterMap).then(function(jsonResponse) {
-      console.log(JSON.stringify(jsonResponse));
-    });
 
     console.log('HasAssignmentLaunchRequestHandler:', JSON.stringify(currentAssignment.school));
 
@@ -350,8 +355,13 @@ const LaunchRequestHandler = {
   },
   handle(handlerInput){
     const requestType = handlerInput.requestEnvelope.request.type;
+
+    let speechOutput = "Welcome to College Coach. I will help you find the right school. ";
+    const prompt = "Where would you like to go to school?";
+
     return handlerInput.responseBuilder
-      .speak(requestType)
+      .speak(speechOutput + prompt)
+      .reprompt(prompt)
       .getResponse();
   }
 };
@@ -606,10 +616,10 @@ const InitializeSession = {
                                                         }
 
           sessionAttributes.currentAssignment = {};
-          sessionAttributes.currentAssignment.school = {
-                                                          name: "Colorado School of Mines"
-                                                       };
-          sessionAttributes.currentAssignment.task = "look at ";
+          // sessionAttributes.currentAssignment.school = {
+          //                                                 name: "Colorado School of Mines"
+          //                                              };
+          // sessionAttributes.currentAssignment.task = "look at ";
         }
         
 
