@@ -3,7 +3,9 @@
 
 const Alexa = require('ask-sdk');
 
-const Scorecard = require('scorecard.js');
+const Scorecard = require('./scorecard.js');
+const States = require('./states.js');
+const UserSchools = require('./userSchools.js');
 
 const RatingIntentHandler = {
   canHandle(handlerInput){
@@ -26,6 +28,38 @@ const RatingIntentHandler = {
     let ratingResponse;
 
     const reprompt = 'From one through five, how would you rate the ' + currentAssignment.school.name;
+
+    userSchools = new UserSchools();
+
+    const userId = handlerInput.requestEnvelope.context.System.user.userId;
+
+    // TODO: move saving schools to where we assign a school/assignment
+    // userSchools.saveSchoolsForUser(userId, [sessionAttributes.currentAssignment.school.name], function(err, result) {
+    //  if(err) {
+    //    console.log(err);
+    //   } else {
+    //     console.log('saveSchoolsForUser', result);
+    //   }      
+    // });
+
+    let rating = slotValues.rating_number.value;
+    if(!rating) {
+      rating = slotValues.rating_sentiment.id;
+    }
+
+    rating = parseInt(rating);
+    
+    console.log('userId:', userId);
+
+    console.log('school assignment:', sessionAttributes.currentAssignment.school.name);
+
+    userSchools.updateRatingForSchool(userId, sessionAttributes.currentAssignment.school.name, rating, function(err, result) {
+      if(err) {
+        console.log(err);
+      } else {
+        console.log('updateRatingForSchool',result);
+      }
+    } );
 
     if (slotValues.rating_number.value > 3 || slotValues.rating_sentiment.id > 3) {
         ratingResponse = 'Great! Sounds like you liked the ' + currentAssignment.school.name;
@@ -101,9 +135,15 @@ const AboutSchoolIntentHandler = {
       || handlerInput.requestEnvelope.request.type === 'CanFulfillIntentRequest')
       && handlerInput.requestEnvelope.request.intent.name === 'AboutSchoolIntent'
   },
-  handle(handlerInput) {
+  async handle(handlerInput) {
     console.log('AboutSchoolIntentHandler');
     
+    // const response = disambiguateSlot(handlerInput);
+
+    // if (response) {
+    //   return response;
+    // }
+
     const slotValues = getSlotValues(handlerInput.requestEnvelope.request.intent.slots);
 
     const attributesManager = handlerInput.attributesManager;
@@ -113,9 +153,38 @@ const AboutSchoolIntentHandler = {
 
     const school = slotValues.school;
 
+    var parameterMap = {
+      'school.name' : school.value,
+      'school.operating' : '1' ,
+    };
+    const scorecard = new Scorecard();
+    
+    let speechOutput = await scorecard.getSchoolInformation(parameterMap).then(function(jsonResponse) {
+
+      console.log('response:', JSON.stringify(jsonResponse));
+
+      // TODO: sort the array of results based upon 2015.student.size
+      // TODO: In our training data for every item that has a dash, add a top level entry for a flavor with no dash.
+
+      let schoolName = jsonResponse.results[0]['school.name'].split('-')[0];
+      let schoolCity = jsonResponse.results[0]['school.city'];
+      let schoolState = States[jsonResponse.results[0]['school.state']];
+      let schoolSize = jsonResponse.results[0]['2015.student.size'];
+      let schoolCompletionRate = Math.round(jsonResponse.results[0]['2015.completion.rate_suppressed.overall'] * 100);
+      let schoolAvgNetPrice = Math.round(jsonResponse.results[0]['2015.cost.avg_net_price.overall'] / 1000) * 1000;
+
+      let speechOutput = schoolName + " is located in " + schoolCity + ', ' + schoolState + '. ';
+      speechOutput += schoolCompletionRate + '% of students complete their degree. With an annual cost of $';
+      speechOutput += schoolAvgNetPrice + '.';
+
+      console.log('AboutSchoolIntent:', schoolName, schoolCity, schoolState, schoolSize, schoolCompletionRate, schoolAvgNetPrice);
+
+      return speechOutput;
+    });
+
     return handlerInput.responseBuilder
-      .speak("About School Intent" + school.value)
-      .getResponse();
+    .speak(speechOutput)
+    .getResponse();
   }
 };
 
@@ -239,7 +308,7 @@ const HasAssignmentLaunchRequestHandler = {
       console.log(JSON.stringify(jsonResponse));
     });
 
-    
+    console.log('HasAssignmentLaunchRequestHandler:', JSON.stringify(currentAssignment.school));
 
     //TODO: Create a Join Function for Adding Spaces between Sentence Fragments
     let speechOutput = getGreeting() + getStreak() + 'Your assignment from last time was to' + ' ' 
@@ -308,7 +377,7 @@ const CFIRResponseInterceptor = {
     console.log('in CFIRResponseInterceptor');
 
     console.log('type:', handlerInput.requestEnvelope.request.type);
-    console.log('intent:', handlerInput.requestEnvelope.request.intent.name)
+    //console.log('intent:', handlerInput.requestEnvelope.request.intent.name)
 
 
     if (handlerInput.requestEnvelope.request.type === 'CanFulfillIntentRequest'
@@ -408,6 +477,48 @@ function getNextSearchRefinement() {
 
 //** Cookbook */
 
+function disambiguateSlot(handlerInput) {
+  let currentIntent = handlerInput.requestEnvelope.request.intent;
+  for (const slotName in currentIntent.slots) {
+    if (Object.prototype.hasOwnProperty.call(currentIntent.slots, slotName)) {
+      const currentSlot = currentIntent.slots[slotName];
+      if (currentSlot.confirmationStatus !== 'CONFIRMED'
+        && currentSlot.resolutions
+        && currentSlot.resolutions.resolutionsPerAuthority[0]) {
+        if (currentSlot.resolutions.resolutionsPerAuthority[0].status.code === 'ER_SUCCESS_MATCH') {
+          if (currentSlot.resolutions.resolutionsPerAuthority[0].values.length > 1) {
+            prompt = 'Which would you like';
+            const length = currentSlot.resolutions.resolutionsPerAuthority[0].values.length;
+
+            currentSlot.resolutions.resolutionsPerAuthority[0].values
+              .forEach((element, index) => {
+                prompt += ` ${(index === length - 1) ? ' or' : ' '} ${element.value.name}`;
+              });
+
+            prompt += '?';
+
+            return handlerInput.responseBuilder
+              .speak(prompt)
+              .reprompt(prompt)
+              
+              .getResponse();
+          }
+        } else if (currentSlot.resolutions.resolutionsPerAuthority[0].status.code === 'ER_SUCCESS_NO_MATCH') {
+          if (requiredSlots.indexOf(currentSlot.name) > -1) {
+            prompt = `What ${currentSlot.name} are you looking for`;
+
+            return handlerInput.responseBuilder
+              .speak(prompt)
+              .reprompt(prompt)
+              .getResponse();
+          }
+        }
+      }
+    }
+  } 
+  return null;
+}
+
 function getSlotValues(filledSlots) {
   const slotValues = {};
 
@@ -486,7 +597,6 @@ const InitializeSession = {
 
       } 
   }
-
 
 const skillBuilder = Alexa.SkillBuilders.standard();
 

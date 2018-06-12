@@ -1,0 +1,22 @@
+{
+    "metadata": {
+        "total": 1,
+        "page": 0,
+        "per_page": 20
+    },
+    "results": [
+        {
+            "school.name": "Colorado State University-Fort Collins",
+            "school.degrees_awarded.predominant": 3,
+            "school.state": "CO",
+            "2015.student.size": 22727,
+            "id": 126818,
+            "2015.cost.avg_net_price.overall": 16777,
+            "school.under_investigation": 0,
+            "school.city": "Fort Collins",
+            "school.branches": 1,
+            "2015.completion.rate_suppressed.overall": 0.6591,
+            "school.ownership": 1
+        }
+    ]
+}
