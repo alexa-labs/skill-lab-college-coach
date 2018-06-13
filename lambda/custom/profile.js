@@ -18,21 +18,13 @@ function Profile() {
 
 //save the user profile with current task and school.
 /* @INTERNAL */
-Profile.prototype.saveUserProfile = function(userId, applicationFormDate, taskId, schoolName, 
-	timedTask, timedTaskId, streak, callback) {
-	var params = {
+Profile.prototype.saveUserProfile = function(params, callback) {
+	var searchParams = {
         TableName: tableName,
-        Item: {
-            "userId" : userId,
-            "applicationFormDate": applicationFormDate,
-            "taskId" : taskId,
-			"currentSchoolName" : schoolName,
-			"timedTask" : timedTask,
-			"timedTaskId" : timedTaskId,
-			"streak" : streak
-        }
+        Item: params
 	};
-	this.dynamoDBClient.insertRecord(params, callback);
+	console.log('saveUserProfile:', JSON.stringify(searchParams));
+	this.dynamoDBClient.insertRecord(searchParams, callback);
 }
 
 // Get the user profile pojo.
