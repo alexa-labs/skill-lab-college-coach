@@ -6,6 +6,7 @@ const Alexa = require('ask-sdk');
 const Scorecard = require('./scorecard.js');
 const States = require('./states.js');
 const UserSchools = require('./userSchools.js');
+const Profile = require('./profile.js');
 
 const RatingIntentHandler = {
   canHandle(handlerInput){
@@ -14,6 +15,8 @@ const RatingIntentHandler = {
   },
   async handle(handlerInput){
     const intentName = handlerInput.requestEnvelope.request.intent.name;
+
+    console.log(intentName);
 
     const filledSlots = handlerInput.requestEnvelope.request.intent.slots;
     const slotValues = getSlotValues(filledSlots);
@@ -33,44 +36,51 @@ const RatingIntentHandler = {
 
     const userId = handlerInput.requestEnvelope.context.System.user.userId;
 
-    // TODO: move saving schools to where we assign a school/assignment
-    // userSchools.saveSchoolsForUser(userId, [sessionAttributes.currentAssignment.school.name], function(err, result) {
-    //  if(err) {
-    //    console.log(err);
-    //   } else {
-    //     console.log('saveSchoolsForUser', result);
-    //   }      
-    // });
+    let isValidRating = true;
 
-    let rating = slotValues.rating_number.value;
-    if(!rating) {
-      rating = slotValues.rating_sentiment.id;
-    }
-
-    rating = parseInt(rating);
-    
-    console.log('userId:', userId);
-
-    console.log('school assignment:', sessionAttributes.currentAssignment.school.name);
-
-    userSchools.updateRatingForSchool(userId, sessionAttributes.currentAssignment.school.name, rating, function(err, result) {
-      if(err) {
-        console.log(err);
-      } else {
-        console.log('updateRatingForSchool',result);
-      }
-    } );
+    console.log('slot values: ', JSON.stringify(slotValues));
+    console.log('rating number <= 3', slotValues.rating_number.value <= 3);
+    console.log('rating sentiment id <= 3',slotValues.rating_sentiment.id <= 3);
 
     if (slotValues.rating_number.value > 3 || slotValues.rating_sentiment.id > 3) {
         ratingResponse = 'Great! Sounds like you liked the ' + currentAssignment.school.name;
-    } else if (slotValues.rating_number.value <= 3 || slotValues.rating_sentiment.id <= 3) {
+    } else if (slotValues.rating_number.value <= 3 || ( slotValues.rating_sentiment.isValidated && slotValues.rating_sentiment.id <= 3)) {
         ratingResponse = 'Ok. We\'ll find better matches for you next time. ';
     } else {
-        ratingResponse = 'Sorry, I\'m not sure what ' + slotValues.rating_sentiment.id
+        let misunderstoodValue = 'that'
+        if (!slotValues.rating_sentiment.isValidated) {
+          misunderstoodValue = slotValues.rating_sentiment.value;
+        }
+
+        ratingResponse = 'Sorry, I\'m not sure what ' + misunderstoodValue
         + ' means. ' + reprompt;
+
+        isValidRating = false;
     }
 
-    ratingResponse += getNextSearchRefinement();
+    if (isValidRating) {
+      let rating = slotValues.rating_number.value;
+      if(!rating) {
+        rating = slotValues.rating_sentiment.id;
+      }
+  
+      rating = parseInt(rating);
+      
+      console.log('userId:', userId);
+  
+      console.log('school assignment:', sessionAttributes.currentAssignment.school.name);
+  
+      userSchools.updateRatingForSchool(userId, sessionAttributes.currentAssignment.school.name, rating, function(err, result) {
+        if(err) {
+          console.log(err);
+        } else {
+          console.log('updateRatingForSchool',result);
+        }
+      } );
+      
+      // TODO: add sentence join function
+      ratingResponse += ' ' + getNextSearchRefinement();
+    }
 
     return handlerInput.responseBuilder
       .speak(ratingResponse)
@@ -222,12 +232,37 @@ const InProgressProfileIntentHandler = {
     //TODO: Update Search based on new searchRefinements
     //TODO: Prompt with next school + task
 
-    let speechOutput;
-    let reprompt;
+    const userId = handlerInput.requestEnvelope.context.System.user.userId;
+    userSchools = new UserSchools();
+
+    var parameterMap = {
+      'school.state' : slotValues.state.id,
+      'school.operating' : '1' ,
+      //'2015.academics.program.degree.engineering' : '1',
+      '2015.academics.program_available.assoc_or_bachelors' : 'true'
+    };
+    const scorecard = new Scorecard();
+    
+    scorecard.listAllSchools(parameterMap).then(function(jsonResponse) {
+      console.log(JSON.stringify(jsonResponse));
+
+      userSchools.saveSchoolsForUser(userId, [jsonResponse[0]], function(err, result) {
+      if(err) {
+        console.log(err);
+        } else {
+          console.log('saveSchoolsForUser', result);
+        }      
+      });  
+    });
+    
+
+    let speechOutput = 'hello there';
+    let reprompt = 'hi again';
 
     return handlerInput.responseBuilder
       .speak(speechOutput)
       .reprompt(reprompt)
+      //.addDelegateDirective()
       .getResponse();
   }
 };
@@ -296,17 +331,6 @@ const HasAssignmentLaunchRequestHandler = {
     const sessionAttributes = attributesManager.getSessionAttributes();
 
     let currentAssignment = sessionAttributes.currentAssignment;
-    var parameterMap = {
-      'school.state' : 'CO',
-      'school.operating' : '1' ,
-      '2015.academics.program.degree.engineering' : '1',
-      '2015.academics.program_available.assoc_or_bachelors' : 'true'
-    };
-    const scorecard = new Scorecard();
-    
-    scorecard.listAllSchools(parameterMap).then(function(jsonResponse) {
-      console.log(JSON.stringify(jsonResponse));
-    });
 
     console.log('HasAssignmentLaunchRequestHandler:', JSON.stringify(currentAssignment.school));
 
@@ -332,8 +356,13 @@ const LaunchRequestHandler = {
   },
   handle(handlerInput){
     const requestType = handlerInput.requestEnvelope.request.type;
+
+    let speechOutput = "Welcome to College Coach. I will help you find the right school. ";
+    const prompt = "Where would you like to live while studying for the next 2 to 4 years??";
+
     return handlerInput.responseBuilder
-      .speak(requestType)
+      .speak(speechOutput + prompt)
+      .reprompt(prompt)
       .getResponse();
   }
 };
@@ -448,7 +477,7 @@ const ErrorHandler = {
   );
 
     return handlerInput.responseBuilder
-      .speak('Sorry, an error occurred.')
+      .speak('Sorry, an error occurred. <say-as interpret-as="interjection">wah wah</say-as>')
       .reprompt('Sorry, an error occurred.')
       .getResponse();
   },
@@ -571,36 +600,96 @@ function getSlotValues(filledSlots) {
 }
 
 //** Interceptors */
-
 const InitializeSession = {
   async process (handlerInput) {
     const attributesManager = handlerInput.attributesManager;
     const sessionAttributes = attributesManager.getSessionAttributes();
 
-      if (Object.keys(sessionAttributes).length === 0) {
-        sessionAttributes.profile = {};
-          sessionAttributes.profile.counter = 1;
+    console.log('session:', JSON.stringify(handlerInput.requestEnvelope.session));
 
-          //https://collegescorecard.ed.gov/search/?major=engineering_technology&state=CO&sort=advantage:desc
-          sessionAttributes.profile.searchRefinements = { 
-                                                          major: 'engineering_technology',
-                                                          state: 'CO'
-                                                        }
+    //if (Object.keys(sessionAttributes).length === 0) {
+      //https://collegescorecard.ed.gov/search/?major=engineering_technology&state=CO&sort=advantage:desc
+      // sessionAttributes.profile.searchRefinements = { 
+      //                                                 major: 'engineering_technology',
+      //                                                 state: 'CO'
+      //                                               }
 
-          sessionAttributes.currentAssignment = {};
-          sessionAttributes.currentAssignment.school = {
-                                                          name: "Colorado School of Mines"
-                                                       };
-          sessionAttributes.currentAssignment.task = "look at ";
-        }
-        
+      // sessionAttributes.currentAssignment = {};
+      // sessionAttributes.currentAssignment.school = {
+      //                                                 name: "Colorado School of Mines"
+      //                                              };
+      // sessionAttributes.currentAssignment.task = "look at ";
+    // }
 
-      } 
+    // load the profile 
+      if (!sessionAttributes.profile) {
+      sessionAttributes.profile = {};
+      profile = new Profile();
+
+      const userId = handlerInput.requestEnvelope.context.System.user.userId;
+      
+      profile.getUserProfilePojo(userId, function(err, result) {
+        let userProfile;
+        console.log('getUserProfilePojo');
+        if (err === 'NO_RECORD_FOUND_FOR_USER') {
+          userProfile = { 
+            "userId": userId,
+            // "applicationFormDate": applicationFormDate,
+            // "taskId" : taskId,
+            // "currentSchoolName" : schoolName,
+            // "timedTask" : timedTask,
+            // "timedTaskId" : timedTaskId,
+            "streak" : 0
+          };
+          profile.saveUserProfile(userProfile, function (err, result) {
+            console.log('saveUserProfile');
+             if (err) {
+               console.log('error saving profile:', err);
+             } else {
+               console.log('profile created:', JSON.stringify(result));
+             }
+            });
+        } else {
+          if (err) {
+            console.log('error getting profile:', err);
+          } else {
+            // jquintozamora saved our lives! 
+            console.log('profile received:', JSON.stringify(result));
+            userProfile = result;
+          }
+        } 
+        sessionAttributes.profile = userProfile;
+        console.log('sessionAttributes:', JSON.stringify(sessionAttributes));
+        attributesManager.setSessionAttributes(sessionAttributes);
+      });
+      
+    }
   }
+}
+
+  const StreakInterceptor = {
+    process (handlerInput) {
+      if (handlerInput.requestEnvelope.session.new) {
+        const attributesManager = handlerInput.attributesManager;
+        const sessionAttributes = attributesManager.getSessionAttributes();
+
+        console.log('StreakInterceptor', JSON.stringify(sessionAttributes));
+
+      }
+    }
+  };
 
 const skillBuilder = Alexa.SkillBuilders.standard();
 
 //TODO: streak system
+
+// the third time and every multiple of 5 after
+
+// place to store the streak
+// greetings
+// calculate when to change the streak greeting
+// compute the streak - every time we start the skill 
+
 //TODO: time-based assignment system with reprompts
 //TODO: ratingIntentHandlers
 
@@ -625,6 +714,7 @@ exports.handler = skillBuilder
   )
   .addRequestInterceptors(
     InitializeSession,
+    StreakInterceptor
   )
   .addResponseInterceptors(
     CFIRResponseInterceptor,
